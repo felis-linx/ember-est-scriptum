@@ -1,0 +1,11 @@
+{{#if (is-array content.content)}}
+<ul class="dropdown-menu">
+  {{#each content.content as |data|}}
+    <li {{action 'apply' data.action data.option}}>{{data.description}}</li>
+  {{/each}}
+</ul>
+{{else}}
+<div class="dropdown-menu">
+{{yield}}
+</div>
+{{/if}}

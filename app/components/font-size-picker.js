@@ -1,0 +1,1 @@
+export { default } from 'ember-est-scriptum/components/font-size-picker';

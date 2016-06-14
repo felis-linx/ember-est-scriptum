@@ -1,48 +1,24 @@
 <div class="editable-content" contenteditable="true">
-{{breakline content}}
+{{safeContent}}
 </div>
 {{#if focused}}
 <div class="instrumenta">
+{{#each _instrumenta as |instrumentaSection|}}
   <span class="instrumenta-section">
-	{{fa-icon icon='bold' click=(action 'apply' 'bold')}}
-	{{fa-icon icon='italic' click=(action 'apply' 'italic')}}
-	{{fa-icon icon='underline' click=(action 'apply' 'underline')}}		
-	{{fa-icon icon='strikethrough' click=(action 'apply' 'strikethrough')}}		
-	{{fa-icon icon='subscript' click=(action 'apply' 'subscript')}}		
-	{{fa-icon icon='superscript' click=(action 'apply' 'superscript')}}
-	{{fa-icon icon='eraser' click=(action 'apply' 'removeFormat')}}
+  {{#each instrumentaSection as |instrumentum|}}
+    {{#if instrumentum.dropdown}}
+      {{#if (is-array instrumentum.content)}}
+        {{dropdown-instrumentum content=instrumentum}}
+      {{else}}
+        {{#dropdown-instrumentum content=instrumentum}}
+          {{component instrumentum.content.component parent=this value=instrumentum.content.value}}
+        {{/dropdown-instrumentum}}
+      {{/if}}
+    {{else}}
+      {{fa-icon icon=instrumentum.icon click=(action 'apply' instrumentum.action)}}
+    {{/if}}
+  {{/each}}
   </span>
-  <span class="instrumenta-section">
-	{{fa-icon icon='align-left' click=(action 'apply' 'justifyLeft')}}
-	{{fa-icon icon='align-center' click=(action 'apply' 'justifyCenter')}}
-	{{fa-icon icon='align-right' click=(action 'apply' 'justifyRight')}}
-	{{fa-icon icon='align-justify' click=(action 'apply' 'justifyFull')}}
-  </span>
-  <span class="instrumenta-section">
-	{{#wysed-dropdown icon='font'}}
-  	<ul class="dropdown-menu">
-	  	<li {{action 'apply' 'fontFamily' 'serif'}}>Serif</li>
-	  	<li {{action 'apply' 'fontFamily' 'sans-serif'}}>Sans-serif</li>
-	  	<li {{action 'apply' 'fontFamily' 'monospace'}}>Monospace</li>
-	  	<li {{action 'apply' 'fontFamily' 'inherit'}}>Inherit</li>
-		</ul>
-	{{/wysed-dropdown}}
-	{{#wysed-dropdown icon='text-height'}}
-  	<div class="dropdown-menu font-size-picker">
-	  	{{input type='range' id='fontSize' name='fontSize' value=currentFontSize min='8' max='48' step='1'}}
-	  	<output for="fontSize" name="currentFontSize">{{currentFontSize}}pt</output>—{{currentFontSize}}
-		</div>
-	{{/wysed-dropdown}}
-	{{#wysed-dropdown icon='paragraph'}}
-  	<ul class="dropdown-menu">
-	  	<li {{action 'apply' 'formatBlock' 'p'}}>paragraph</li>
-	  	<li {{action 'apply' 'formatBlock' 'h1'}}><h1>Header 1</h1></li>
-	  	<li {{action 'apply' 'formatBlock' 'h2'}}><h2>Header 2</h2></li>
-	  	<li {{action 'apply' 'formatBlock' 'h3'}}><h3>Header 3</h3></li>
-		</ul>
-	{{/wysed-dropdown}}
-  </span>
-  <span class="instrumenta-section">
-  </span>
+{{/each}}
 </div>
 {{/if}}

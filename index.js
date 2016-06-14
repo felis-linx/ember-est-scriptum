@@ -2,5 +2,10 @@
 'use strict';
 
 module.exports = {
-  name: 'ember-est-scriptum'
+  name: 'ember-est-scriptum',
+
+  isDevelopingAddon: function() {
+    return true;
+  }
 };
+
