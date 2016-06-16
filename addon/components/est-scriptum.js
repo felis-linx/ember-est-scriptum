@@ -6,6 +6,13 @@ import layout from '../templates/components/est-scriptum';
  *
  */
 
+const ELEMENT_NODE = 1;
+const TEXT_NODE	= 3;
+
+function nodeIndex(parent, node) {
+	return Array.prototype.indexOf.call(parent.childNodes, node);
+}
+
 const defaultInstrumenta = [
   [
     'bold',
@@ -14,7 +21,7 @@ const defaultInstrumenta = [
     'strikethrough',
     'subscript',
     'superscript',
-    {'eraser':'removeFormat'}
+    { eraser: 'removeFormat' }
   ],
   [
     {'align-left': 'justifyLeft'},
@@ -24,28 +31,49 @@ const defaultInstrumenta = [
   ],
   [
     {
-      'dropdown': 'font',
-      'content': [
-        {'fontFamily': 'serif'},
-        {'fontFamily': 'sans-serif'},
-        {'fontFamily': 'monospace'},
-        {'fontFamily': 'inherit'}
+      dropdown: 'font',
+      content: [
+        { fontFamily: 'serif' },
+        { fontFamily: 'sans-serif' },
+        { fontFamily: 'monospace' },
+        { fontFamily: 'inherit' }
       ]
     },
     {
-      'dropdown': 'paragraph',
-      'content': [
-        {'formatBlock': {'p': 'paragraph'}},
-        {'formatBlock': {'h1': '<h1>Header 1</h1>'}},
-        {'formatBlock': {'h2': '<h2>Header 2</h2>'}},
-        {'formatBlock': {'h3': '<h3>Header 3</h3>'}}
+      dropdown: 'paragraph',
+      content: [
+        { formatBlock: { p : 'paragraph' }},
+        { formatBlock: { h1 : '<h1>Header 1</h1>' }},
+        { formatBlock: { h2 : '<h2>Header 2</h2>' }},
+        { formatBlock: { h3 : '<h3>Header 3</h3>' }}
       ]
     },
     {
-      'dropdown': 'text-height',
-      'content': {'font-size-picker': 'currentFontSize'}
+      dropdown: true,
+      component: {
+        name: 'font-size-picker',
+        value: 'currentFontSize',
+        icon: 'text-height'
+      }
     }
-  ]
+  ]/*,
+  [
+    {
+      component: {
+        name: 'colorPicker',
+        value: 'color',
+        icon: 'font'
+      }
+    },
+    {
+      component: {
+        name: 'colorPicker',
+        value: 'bgColor',
+        icon: 'file-text',
+        yield: ''
+      }
+    }
+  ]*/
 ];
 
 export default Ember.Component.extend({
@@ -64,6 +92,7 @@ export default Ember.Component.extend({
   defaultPS: false, // can use P as default paragraph separator on exec 'insertParagraph'
 
   _instrumenta: null,
+  colorPicker: false,
 
   safeContent: Ember.computed('content', function() {
     var text = this.get('content');
@@ -73,6 +102,16 @@ export default Ember.Component.extend({
 //    Ember.Logger.info('safeString --- clear up content', text);
     return Ember.String.htmlSafe(text.replace(/\n|\r\n|\r/g, '<br>'));
   }),
+	
+  init() {
+    this._super(...arguments);
+		
+    if (document.queryCommandSupported('defaultParagraphSeparator') === true) {      
+      if (document.execCommand('defaultParagraphSeparator', false, 'p') === true) {
+        this.set('defaultPS', true);
+      }
+    }		
+  },
 
   _initEstScriptum: function(){
     var self = this,
@@ -83,12 +122,11 @@ export default Ember.Component.extend({
       var _section = [];
 
       section.forEach(function(item) {
-        if (typeof item === 'string') {
-          _section.push({'icon':item, 'action':item});
-        } else {
-          if (item.hasOwnProperty('dropdown')) {
-            var _content = [];
-            if (Array.isArray(item.content)) {
+        if (typeof item === 'object') {
+          if (item.hasOwnProperty('dropdown') || item.hasOwnProperty('component')) {                       
+            if (item.hasOwnProperty('content') && Array.isArray(item.content)) {
+              var _content = [];
+              
               item.content.forEach(function(option) {
                 for (var first in option) { break; }
                 var _option = {'action': first};
@@ -101,27 +139,57 @@ export default Ember.Component.extend({
                 }
                 _content.push(_option);
               });
+              
+              _section.push({
+                dropdown: true,
+                icon: item.dropdown,
+                content: _content
+              });
+              
             } else {
-              for (var component in item.content) { break; }
-              _content = {component: component, value: item.content[component]};
-            }
-            _section.push({dropdown:true, 'icon':item.dropdown, 'content':_content});
+              var name = self.get(item.component.name);
+//              for (var component in item.content) { break; }
+//              _content = {component: component, value: item.content[component]};
+              if (name !== false) {
+                _section.push({
+                  dropdown: item.dropdown,
+                  component: name || item.component.name,
+                  value: item.component.value,
+                  action: item.component.action,
+                  icon:item.component.icon
+                });
+              }
+              
+            }            
           } else {
             for (var first in item) { break; }
-            _section.push({'icon':first, 'action':item[first]});
+            _section.push({icon: first, action: item[first]});
           }
+        } else {
+          _section.push({icon: item, action: item});
         }
       });
-      _instrumenta.push(_section);
-//      Ember.Logger.log(item);
+      
+      if (_section.length > 0) {
+        _instrumenta.push(_section);
+      }
     });
+    
     this.set('_instrumenta', _instrumenta);
     var t1 = performance.now();
     Ember.Logger.log('[Est Scriptum] initialization took ' + (t1-t0) + ' milliseconds.');
+
+		if (!document.execCommand('styleWithCSS', false, true)) {
+			Ember.Logger.error('[Est Scriptum] styleWithCSS false :(');
+		}
   }.on('didInsertElement'),
 
   focusIn: function() {
     this.set('focused', true);
+    if (this.get('onfocus')) {
+      this.sendAction('onfocus');
+    }
+		return true;
   },
 
   focusOut: function() {
@@ -129,6 +197,9 @@ export default Ember.Component.extend({
       this.set('focused', false);
       var text = this.$('.editable-content').html().replace(/\n|\r\n|\r/g, '');
       this.set('content', text); //clear text from new line symbols
+      if (this.get('onfocus')) {
+        this.sendAction('onblur');
+      }
     } else {
       this.saveSelection();
 //      this.restoreSelection();
@@ -254,7 +325,8 @@ export default Ember.Component.extend({
     get(key) {
       console.log('fontSize get '+key);
       debugger;
-      var size = this.getCommonAncestorStyled('fontSize');
+      var range = this.get('selectionRange'),
+          size = this.getCommonAncestorStyled('fontSize', range);
       if (size !== false) { size = size.style['fontSize'].replace(/[a-zA-Z]/gi ,''); }
        else { size = 12; }
       return size;
@@ -281,23 +353,51 @@ export default Ember.Component.extend({
       case 'fontFamily':
       case 'fontSize':
 //				var rangeAncestorCSS = this.get('selectionRange').commonAncestorContainer.parentNode.style; //selectionRange
-        var range = this.get('selectionRange'), element, wholeNode = false,
+        var range = this.get('selectionRange'),
+						element,
+						wholeNode = false,
             parentAcestor;
+				
+				if (range.endOffset === 0 && range.endContainer.nodeType === ELEMENT_NODE) {
+					var i = nodeIndex(range.commonAncestorContainer, range.endContainer),
+							prevNode = range.commonAncestorContainer.childNodes[i-1];
+					range.setEnd(prevNode, prevNode.childNodes.length);
+//					range.setEndBefore(range.endContainer);
+					if (range.startOffset === 0 && range.startContainer.nodeType !== ELEMENT_NODE) {
+						range.setStart(range.startContainer.parentNode, 0);
+					}
+				}
 
-        if (range.startOffset === 0 && range.startContainer.length === range.endOffset) { wholeNode = true; }
+        if (range.startContainer.nodeType === range.endContainer.nodeType === ELEMENT_NODE && 
+						nodeIndex(range.commonAncestorContainer, range.startContainer) === nodeIndex(range.commonAncestorContainer, range.endContainer)) {
+//        if (range.startOffset === 0 && range.startContainer.length === range.endOffset) {
+					wholeNode = true;
+				}
+
+				debugger;
 
         if (wholeNode === true ) {
-          parentAcestor = this.getCommonAncestorStyled(actionName, range.commonAncestorContainer.parentNode.parentNode);
-        }
-         else  { parentAcestor = this.getCommonAncestorStyled(actionName, range); }
+          parentAcestor = this.getCommonAncestorStyled(actionName, range.commonAncestorContainer.parentNode/*.parentNode)*/);
+        } else {
+					parentAcestor = this.getCommonAncestorStyled(actionName, range);
+				}
 
-        if (range.collapsed !== true && wholeNode === false) {
-          element = document.createElement('span');
-          range.surroundContents(element);
-        }
-         else {
-           element = this.getCommonAncestor(range);
-         }
+        if (wholeNode === false) {
+					if (range.collapsed === false) {
+						element = document.createElement('span');
+						try {
+							range.surroundContents(element);
+						} catch (error) {
+							Ember.Logger.error(error);
+							element.appendChild(range.extractContents());
+							range.insertNode(element);
+						}
+					} else {
+						element = this.getCommonAncestor(range);
+					}
+				} else {
+					element = range.commonAncestorContainer;
+				}
 
         // clear style if math with parent
         if (parentAcestor !== false && parentAcestor.style[actionName] === args) {
@@ -316,24 +416,12 @@ export default Ember.Component.extend({
         break;
 
       default:
-        if (!document.execCommand('styleWithCSS', false, true)) { 
-          console.error('styleWithCSS false!');
-        }
-        if (!document.execCommand(actionName, false, args)) {
-          console.error('Error in executed command '+actionName+' with args '+args);
+        if (actionName && !document.execCommand(actionName, false, args)) {
+          Ember.Logger.error('[Est Scriptum] error when execute command', actionName, 'with args', args);
         }
         break;
     }
     this.saveSelection();
-  },
-
-  init() { //TODO: check functionality without ...args
-    this._super(...arguments);
-    if (document.queryCommandSupported('defaultParagraphSeparator') === true) {      
-      if (document.execCommand('defaultParagraphSeparator', false, 'p') === true) {
-        this.set('defaultPS', true);
-      }
-    }
   },
 
   actions: {

@@ -1,6 +1,4 @@
-<div class="editable-content" contenteditable="true">
-{{safeContent}}
-</div>
+<div class="editable-content" contentEditable="true">{{safeContent}}</div>
 {{#if focused}}
 <div class="instrumenta">
 {{#each _instrumenta as |instrumentaSection|}}
@@ -11,14 +9,29 @@
         {{dropdown-instrumentum content=instrumentum}}
       {{else}}
         {{#dropdown-instrumentum content=instrumentum}}
-          {{component instrumentum.content.component parent=this value=instrumentum.content.value}}
+          {{component instrumentum.component parent=this value=instrumentum.value}}
         {{/dropdown-instrumentum}}
       {{/if}}
     {{else}}
-      {{fa-icon icon=instrumentum.icon click=(action 'apply' instrumentum.action)}}
+      {{!#if instrumentum.component}}
+{{!#color-picker color=content.css.background-color colorChange=(action 'change' 'background-color')}}
+        {{!component instrumentum.component parent=this value=instrumentum.content.value}}     
+      {{!else}}
+        {{fa-icon icon=instrumentum.icon click=(action 'apply' instrumentum.action)}}
+      {{!/if}}
     {{/if}}
   {{/each}}
   </span>
 {{/each}}
+{{#if colorPicker}}
+  <span class="instrumenta-section">
+  {{#component colorPicker tagName='i' value=content.css.color action=(action 'apply' 'foreColor')}}
+    <span class="add-on text" title="{{t 'editor.text-color'}}" data-toggle="tooltip" data-placement="bottom"><i></i></span>
+  {{/component}}
+  {{#component colorPicker tagName='i' value=content.css.background-color action=(action 'apply' 'backColor')}}
+    <span class="add-on background" title="{{t 'editor.background-color'}}" data-toggle="tooltip" data-placement="bottom"><i></i></span>
+  {{/component}}
+  </span>
+{{/if}}
 </div>
 {{/if}}
